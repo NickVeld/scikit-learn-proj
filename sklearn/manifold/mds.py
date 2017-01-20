@@ -16,7 +16,6 @@ from ..externals.joblib import Parallel
 from ..externals.joblib import delayed
 from ..isotonic import IsotonicRegression
 
-
 def _smacof_single(dissimilarities, metric=True, n_components=2, init=None,
                    max_iter=300, verbose=0, eps=1e-3, random_state=None):
     """
@@ -424,3 +423,58 @@ class MDS(BaseEstimator):
             return_n_iter=True)
 
         return self.embedding_
+
+    def transform(self, X):
+        """
+        Transform new points into embedding space.
+
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_features]
+
+        Returns
+        -------
+        X_new : array, shape = [n_samples, n_components]
+
+        Notes
+        -----
+
+        """
+        X = check_array(X)
+        # n = X.shape[0]
+        # M = np.zeros((n, n))
+        # for i in range(n):
+        #     for j in range(i+1, n):
+        #         M[j][i] = M[i][j] = metric(X[i], X[j])
+        # M_rows_aver = np.average(M, axis=1)
+        # M_aver = np.average(M_rows_aver)
+        # print(M)
+        # print(M_rows_aver)
+        # print(M_aver)
+        # for i in range(n):
+        #     for j in range(i, n):
+        #         M[j][i] = M[i][j] = (-M[i][j] + M_rows_aver[i] + M_rows_aver[j] - M_aver) / 2
+        # eigenvalues = np.sort(np.linalg.eigvals(M))
+        # print(M)
+        # print(eigenvalues)
+        old_data_n_samples = self.empirical_data.shape[0]
+        new_data_n_samples = self.X.shape[0]
+        K = np.zeros(old_data_n_samples)
+        X_new = np.zeros((new_data_n_samples, self.n_components))
+        for i in range(new_data_n_samples):
+            for j in range(old_data_n_samples):
+                K[j] = metric(X[i], self.empirical_data[j])
+            e_over_K = np.average(K)
+            for j in range(old_data_n_samples):
+                K[j] = K[j]
+            for k in range(self.n_components):
+                for j in range(old_data_n_samples):
+                    X_new[i][k] += self.embedding_[j][k] * K[j]
+                X_new[i][k] /= self.eigenvalues[k]
+
+        return X_new
+
+def metric(vector1, vector2):
+    if (len(vector1) != len(vector2)):
+        raise ValueError("metric's operands have different sizes!")
+    return np.linalg.norm(vector1 - vector2)
