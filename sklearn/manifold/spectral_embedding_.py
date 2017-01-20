@@ -19,6 +19,7 @@ from ..utils.arpack import eigsh
 from ..metrics.pairwise import rbf_kernel
 from ..neighbors import kneighbors_graph
 
+from math import sqrt
 
 def _graph_connected_component(graph, node_id):
     """Find the largest graph connected components that contains one
@@ -132,7 +133,7 @@ def _set_diag(laplacian, value, norm_laplacian):
 
 def spectral_embedding(adjacency, n_components=8, eigen_solver=None,
                        random_state=None, eigen_tol=0.0,
-                       norm_laplacian=True, drop_first=True):
+                       norm_laplacian=True, drop_first=True, return_eigenvalues = False):
     """Project the sample on the first eigenvectors of the graph Laplacian.
 
     The adjacency matrix is used to compute a normalized graph Laplacian
@@ -315,10 +316,16 @@ def spectral_embedding(adjacency, n_components=8, eigen_solver=None,
                 raise ValueError
 
     embedding = _deterministic_vector_sign_flip(embedding)
-    if drop_first:
-        return embedding[1:n_components].T
+    if return_eigenvalues:
+        if drop_first:
+            return embedding[1:n_components].T, lambdas
+        else:
+            return embedding[:n_components].T, lambdas
     else:
-        return embedding[:n_components].T
+        if drop_first:
+            return embedding[1:n_components].T
+        else:
+            return embedding[:n_components].T
 
 
 class SpectralEmbedding(BaseEstimator):
@@ -483,10 +490,14 @@ class SpectralEmbedding(BaseEstimator):
                               "name or a callable. Got: %s") % self.affinity)
 
         affinity_matrix = self._get_affinity_matrix(X)
-        self.embedding_ = spectral_embedding(affinity_matrix,
+        self.e_over_affinity_matrix = np.average(affinity_matrix, axis=0)
+
+        self.embedding_, self.eigenvalues = spectral_embedding(affinity_matrix,
                                              n_components=self.n_components,
                                              eigen_solver=self.eigen_solver,
-                                             random_state=random_state)
+                                             random_state=random_state,
+                                             return_eigenvalues=True)
+        self.empirical_data = X
         return self
 
     def fit_transform(self, X, y=None):
@@ -509,3 +520,59 @@ class SpectralEmbedding(BaseEstimator):
         """
         self.fit(X)
         return self.embedding_
+
+    def transform(self, X):
+        """
+        Transform new points into embedding space.
+
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_features]
+
+        Returns
+        -------
+        X_new : array, shape = [n_samples, n_components]
+
+        Notes
+        -----
+
+        """
+        X = check_array(X)
+
+        # n = X.shape[0]
+        # M = np.zeros((n, n))
+        # for i in range(n):
+        #     for j in range(i + 1, n):
+        #         M[j][i] = M[i][j] = metric(X[i], X[j])
+        # M_rows_aver = np.average(M, axis=1)
+        # M_aver = np.average(M_rows_aver)
+        # print(M)
+        # print(M_rows_aver)
+        # print(M_aver)
+        # for i in range(n):
+        #     for j in range(i, n):
+        #         M[j][i] = M[i][j] = M[i][j]/pow(M_rows_aver[i] * M_rows_aver[j], 0.5)
+        # eigenvectors = np.linalg.eig(M)[1]
+        # print(M)
+        # print(eigenvectors)
+        old_data_n_samples = self.empirical_data.shape[0]
+        new_data_n_samples = self.X.shape[0]
+        K = np.zeros(old_data_n_samples)
+        X_new = np.zeros((new_data_n_samples, self.n_components))
+        for i in range(new_data_n_samples):
+            for j in range(old_data_n_samples):
+                K[j] = metric(X[i], self.empirical_data[j])
+            e_over_K = np.average(K)
+            for j in range(old_data_n_samples):
+                K[j] /= old_data_n_samples * sqrt(e_over_K * self.e_over_affinity_matrix[j])
+            for k in range(self.n_components):
+                for j in range(old_data_n_samples):
+                    X_new[i][k] += self.embedding_[j][k] * K[j]
+                X_new[i][k] /= self.eigenvalues[k]
+
+        return X_new
+
+def metric(vector1, vector2):
+    if (len(vector1) != len(vector2)):
+        raise ValueError("metric's operands have different sizes!")
+    return np.linalg.norm(vector1 - vector2)
