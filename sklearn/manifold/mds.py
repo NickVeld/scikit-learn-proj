@@ -16,6 +16,8 @@ from ..externals.joblib import Parallel
 from ..externals.joblib import delayed
 from ..isotonic import IsotonicRegression
 
+from math import sqrt
+
 def _smacof_single(dissimilarities, metric=True, n_components=2, init=None,
                    max_iter=300, verbose=0, eps=1e-3, random_state=None):
     """
@@ -411,6 +413,7 @@ class MDS(BaseEstimator):
             self.dissimilarity_matrix_ = X
         elif self.dissimilarity == "euclidean":
             self.dissimilarity_matrix_ = euclidean_distances(X)
+            self.empirical_data = X
         else:
             raise ValueError("Proximity must be 'precomputed' or 'euclidean'."
                              " Got %s instead" % str(self.dissimilarity))
@@ -440,6 +443,8 @@ class MDS(BaseEstimator):
         -----
 
         """
+        if self.dissimilarity == "precomputed":
+            raise RuntimeError("It does not work for precomputed dissimilarity matrices!")
         X = check_array(X)
         # n = X.shape[0]
         # M = np.zeros((n, n))
@@ -459,18 +464,30 @@ class MDS(BaseEstimator):
         # print(eigenvalues)
         old_data_n_samples = self.empirical_data.shape[0]
         new_data_n_samples = self.X.shape[0]
+        eigenvalues =
+
+        e_over_data_for_each_v = np.zeros(old_data_n_samples)
+        for i in range(old_data_n_samples):
+            for j in range(old_data_n_samples):
+                e_over_data_for_each_v[i] += metric(self.empirical_data[i]
+                                                    , self.empirical_data[j]) ** 2
+            e_over_data_for_each_v[i] /= old_data_n_samples
+        e_over_whole_data = np.average(e_over_data_for_each_v)
+
         K = np.zeros(old_data_n_samples)
         X_new = np.zeros((new_data_n_samples, self.n_components))
         for i in range(new_data_n_samples):
+            e_over_data_for_X = 0
             for j in range(old_data_n_samples):
-                K[j] = metric(X[i], self.empirical_data[j])
-            e_over_K = np.average(K)
+                e_over_data_for_X += metric(X[i], self.empirical_data[j])
+            e_over_data_for_X /= old_data_n_samples
             for j in range(old_data_n_samples):
-                K[j] = K[j]
+                K[j] = (e_over_data_for_X - e_over_whole_data
+                        + e_over_data_for_each_v[j] - metric(X[i], self.empirical_data[j]))
             for k in range(self.n_components):
                 for j in range(old_data_n_samples):
                     X_new[i][k] += self.embedding_[j][k] * K[j]
-                X_new[i][k] /= self.eigenvalues[k]
+                X_new[i][k] /= sqrt(eigenvalues[k])
 
         return X_new
 
