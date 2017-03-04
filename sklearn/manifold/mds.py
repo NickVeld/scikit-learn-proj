@@ -464,7 +464,7 @@ class MDS(BaseEstimator):
         # print(eigenvalues)
         old_data_n_samples = self.empirical_data.shape[0]
         new_data_n_samples = self.X.shape[0]
-        eigenvalues =
+        # eigenvalues = TODO: PUT SMTH
 
         e_over_data_for_each_v = np.zeros(old_data_n_samples)
         for i in range(old_data_n_samples):
