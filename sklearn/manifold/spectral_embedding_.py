@@ -557,11 +557,15 @@ class SpectralEmbedding(BaseEstimator):
         # print(eigenvectors)
         old_data_n_samples = self.empirical_data.shape[0]
         new_data_n_samples = self.X.shape[0]
-        K = np.zeros(old_data_n_samples)
+
+        K = kneighbors_graph(np.concatenate(self.empirical_data, X), self.n_neighbors_,
+                                                         include_self=True,
+                                                         n_jobs=self.n_jobs)
+        # currently only symmetric affinity_matrix supported
+        K = 0.5 * (K + K.T)
+
         X_new = np.zeros((new_data_n_samples, self.n_components))
         for i in range(new_data_n_samples):
-            for j in range(old_data_n_samples):
-                K[j] = metric(X[i], self.empirical_data[j])
             e_over_K = np.average(K)
             for j in range(old_data_n_samples):
                 K[j] /= old_data_n_samples * sqrt(e_over_K * self.e_over_affinity_matrix[j])
