@@ -562,13 +562,15 @@ class SpectralEmbedding(BaseEstimator):
                                                          include_self=True,
                                                          n_jobs=self.n_jobs)
         # currently only symmetric affinity_matrix supported
-        K = 0.5 * (K + K.T)
+        K = (K + K.T) * 0.5
+        e_over_K = np.average(K[:old_data_n_samples, :], axis=0)
 
         X_new = np.zeros((new_data_n_samples, self.n_components))
         for i in range(new_data_n_samples):
-            e_over_K = np.average(K)
-            for j in range(old_data_n_samples):
-                K[j] /= old_data_n_samples * sqrt(e_over_K * self.e_over_affinity_matrix[j])
+            for j in range(old_data_n_samples + new_data_n_samples):
+                for k in range(j):
+                    K[k][j] /= old_data_n_samples * sqrt(e_over_K[k] * e_over_K[j])
+                    K[j][k] = K[k][j]
             for k in range(self.n_components):
                 for j in range(old_data_n_samples):
                     X_new[i][k] += self.embedding_[j][k] * K[j]
