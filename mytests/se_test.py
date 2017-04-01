@@ -1,3 +1,4 @@
+#Made by Yaroslav, adopted by Nick
 import dataset_generator
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -17,7 +18,7 @@ def test(g=dataset_generator.Generator(), mode='show'):
     n_neighbors = 10
     n_components = 2
     fig = plt.figure(figsize=(15, 8))
-    se = SpectralEmbedding(n_components=n_components, n_neighbors=n_neighbors, out_of_sample=True)
+    se = SpectralEmbedding(n_components=n_components, n_neighbors=n_neighbors)
     '''--------------------------------------------------------------------------------------------------------------'''
     dataset, dataset_colors = g.generate_manifold(f, color_data=spectre1)
     ax = fig.add_subplot(231, projection='3d')
@@ -44,7 +45,7 @@ def test(g=dataset_generator.Generator(), mode='show'):
     '''--------------------------------------------------------------------------------------------------------------'''
     re_colors = dataset_generator.Generator.generate_colors(None, dataset.shape[0], spectre3)
     re_embedding = np.array(list(
-        se.transform(point.reshape(1, -1))
+        se.transform([point.reshape(1, -1)])[0]
         for point in dataset
     ))
 
