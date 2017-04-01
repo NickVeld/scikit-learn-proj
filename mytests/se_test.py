@@ -29,9 +29,8 @@ def test(g=dataset_generator.Generator(), mode='show'):
     ax.scatter(dataset_embedding[:, 0], dataset_embedding[:, 1], c=dataset_colors, cmap=plt.cm.Spectral, marker='s', edgecolors='none')
     '''--------------------------------------------------------------------------------------------------------------'''
     new_points, new_colors = g.generate_manifold(f, spectre2)
-
     new_points_embedding = np.array(list(
-        se.transform(point.reshape(1, -1))
+        se.transform(point.reshape(1, -1))[0]
         for point in new_points
     ))
 
@@ -45,7 +44,7 @@ def test(g=dataset_generator.Generator(), mode='show'):
     '''--------------------------------------------------------------------------------------------------------------'''
     re_colors = dataset_generator.Generator.generate_colors(None, dataset.shape[0], spectre3)
     re_embedding = np.array(list(
-        se.transform([point.reshape(1, -1)])[0]
+        se.transform(point.reshape(1, -1))[0]
         for point in dataset
     ))
 
