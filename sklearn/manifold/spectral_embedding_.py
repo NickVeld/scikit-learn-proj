@@ -490,7 +490,8 @@ class SpectralEmbedding(BaseEstimator):
                               "name or a callable. Got: %s") % self.affinity)
 
         affinity_matrix = self._get_affinity_matrix(X)
-        self.e_over_affinity_matrix = np.average(affinity_matrix, axis=0)
+        #print(affinity_matrix)
+        #self.e_over_affinity_matrix = np.average(affinity_matrix, axis=0)
 
         self.embedding_, self.eigenvalues = spectral_embedding(affinity_matrix,
                                              n_components=self.n_components,
@@ -556,26 +557,23 @@ class SpectralEmbedding(BaseEstimator):
         # print(M)
         # print(eigenvectors)
         old_data_n_samples = self.empirical_data.shape[0]
-        new_data_n_samples = self.X.shape[0]
-
-        K = kneighbors_graph(np.concatenate(self.empirical_data, X), self.n_neighbors_,
+        new_data_n_samples = X.shape[0]
+        K = kneighbors_graph(np.concatenate((self.empirical_data, X)), self.n_neighbors_,
                                                          include_self=True,
                                                          n_jobs=self.n_jobs)
         # currently only symmetric affinity_matrix supported
-        K = (K + K.T) * 0.5
-        e_over_K = np.average(K[:old_data_n_samples, :], axis=0)
-
+        K = ((K + K.T) * 0.5).tolil()
+        e_over_K = K[:old_data_n_samples, :].mean(axis=0)
         X_new = np.zeros((new_data_n_samples, self.n_components))
+        for j in range(old_data_n_samples + new_data_n_samples):
+            for k in range(j):
+                K[k,j] /= sqrt(e_over_K[0,k] * e_over_K[0,j])
+                K[j,k] = K[k,j]       
         for i in range(new_data_n_samples):
-            for j in range(old_data_n_samples + new_data_n_samples):
-                for k in range(j):
-                    K[k][j] /= old_data_n_samples * sqrt(e_over_K[k] * e_over_K[j])
-                    K[j][k] = K[k][j]
             for k in range(self.n_components):
                 for j in range(old_data_n_samples):
-                    X_new[i][k] += self.embedding_[j][k] * K[j]
-                X_new[i][k] /= self.eigenvalues[k]
-
+                    X_new[i,k] += self.embedding_[j,k] * K[i,j]
+                X_new[i,k] /= sqrt(old_data_n_samples) * self.eigenvalues[k]
         return X_new
 
 def metric(vector1, vector2):
