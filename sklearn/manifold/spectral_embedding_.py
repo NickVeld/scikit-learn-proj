@@ -573,7 +573,7 @@ class SpectralEmbedding(BaseEstimator):
             for k in range(self.n_components):
                 for j in range(old_data_n_samples):
                     X_new[i,k] += self.embedding_[j,k] * K[i,j]
-                X_new[i,k] /= sqrt(old_data_n_samples) * self.eigenvalues[k]
+                X_new[i,k] /= old_data_n_samples * self.eigenvalues[k]
         return X_new
 
 def metric(vector1, vector2):
