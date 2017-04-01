@@ -540,22 +540,6 @@ class SpectralEmbedding(BaseEstimator):
         """
         X = check_array(X)
 
-        # n = X.shape[0]
-        # M = np.zeros((n, n))
-        # for i in range(n):
-        #     for j in range(i + 1, n):
-        #         M[j][i] = M[i][j] = metric(X[i], X[j])
-        # M_rows_aver = np.average(M, axis=1)
-        # M_aver = np.average(M_rows_aver)
-        # print(M)
-        # print(M_rows_aver)
-        # print(M_aver)
-        # for i in range(n):
-        #     for j in range(i, n):
-        #         M[j][i] = M[i][j] = M[i][j]/pow(M_rows_aver[i] * M_rows_aver[j], 0.5)
-        # eigenvectors = np.linalg.eig(M)[1]
-        # print(M)
-        # print(eigenvectors)
         old_data_n_samples = self.empirical_data.shape[0]
         new_data_n_samples = X.shape[0]
         K = kneighbors_graph(np.concatenate((self.empirical_data, X)), self.n_neighbors_,
@@ -563,20 +547,21 @@ class SpectralEmbedding(BaseEstimator):
                                                          n_jobs=self.n_jobs)
         # currently only symmetric affinity_matrix supported
         K = ((K + K.T) * 0.5).tolil()
-        e_over_K = K[:old_data_n_samples, :].mean(axis=0)
+        K = K[:old_data_n_samples, :]
+        e_over_K = K.mean(axis=0)
+        K = K[:, old_data_n_samples:]
         X_new = np.zeros((new_data_n_samples, self.n_components))
-        for j in range(old_data_n_samples + new_data_n_samples):
-            for k in range(j):
-                K[k,j] /= sqrt(e_over_K[0,k] * e_over_K[0,j])
-                K[j,k] = K[k,j]       
+        print(str(self.proc))
+        self.proc += 1
+        for j in range(new_data_n_samples):
+            for k in range(old_data_n_samples):
+                K[k,j] /= sqrt(e_over_K[0,k])       
         for i in range(new_data_n_samples):
             for k in range(self.n_components):
                 for j in range(old_data_n_samples):
-                    X_new[i,k] += self.embedding_[j,k] * K[old_data_n_samples+i,j]
-                X_new[i,k] /= old_data_n_samples * self.eigenvalues[k]
+                    X_new[i,k] += self.embedding_[j,k] * K[j,i]
+                X_new[i,k] /= old_data_n_samples \
+                             * sqrt(e_over_K[0,old_data_n_samples + i])
+                             #* self.eigenvalues[k] #Was the paper author wrong?
         return X_new
 
-def metric(vector1, vector2):
-    if (len(vector1) != len(vector2)):
-        raise ValueError("metric's operands have different sizes!")
-    return np.linalg.norm(vector1 - vector2)
