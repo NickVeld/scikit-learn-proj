@@ -546,22 +546,18 @@ class SpectralEmbedding(BaseEstimator):
                                                          include_self=True,
                                                          n_jobs=self.n_jobs)
         # currently only symmetric affinity_matrix supported
-        K = ((K + K.T) * 0.5).tolil()
+        K = ((K + K.T) * 0.5)
         K = K[:old_data_n_samples, :]
-        e_over_K = K.mean(axis=0)
-        K = K[:, old_data_n_samples:]
+        e_over_K = np.asarray(K.mean(axis=0))[0]
+        sne_over_K = np.sqrt(e_over_K[old_data_n_samples:])
+        e_over_K = np.diag(1/np.sqrt(e_over_K[:old_data_n_samples]))
+        K = K[:, old_data_n_samples:].toarray()
         X_new = np.zeros((new_data_n_samples, self.n_components))
-        print(str(self.proc))
-        self.proc += 1
-        for j in range(new_data_n_samples):
-            for k in range(old_data_n_samples):
-                K[k,j] /= sqrt(e_over_K[0,k])       
         for i in range(new_data_n_samples):
-            for k in range(self.n_components):
-                for j in range(old_data_n_samples):
-                    X_new[i,k] += self.embedding_[j,k] * K[j,i]
-                X_new[i,k] /= old_data_n_samples \
-                             * sqrt(e_over_K[0,old_data_n_samples + i])
-                             #* self.eigenvalues[k] #Was the paper author wrong?
+            K[:,i] = np.dot(e_over_K, K[:,i]);
+        X_new = np.dot(np.transpose(K), self.embedding_) / old_data_n_samples
+        for k in range(self.n_components):
+            X_new[:,k] /= sne_over_K \
+                         #* self.eigenvalues[k] #Was the paper author wrong?
         return X_new
 
