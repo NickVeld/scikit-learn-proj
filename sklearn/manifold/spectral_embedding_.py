@@ -406,6 +406,7 @@ class SpectralEmbedding(BaseEstimator):
         self.eigen_solver = eigen_solver
         self.n_neighbors = n_neighbors
         self.n_jobs = n_jobs
+        self.embedding_ = None
 
     @property
     def _pairwise(self):
@@ -554,10 +555,56 @@ class SpectralEmbedding(BaseEstimator):
         K = K[:, old_data_n_samples:].toarray()
         X_new = np.zeros((new_data_n_samples, self.n_components))
         for i in range(new_data_n_samples):
-            K[:,i] = np.dot(e_over_K, K[:,i]);
+            K[:,i] = np.dot(e_over_K, K[:,i])
         X_new = np.dot(np.transpose(K), self.embedding_) / old_data_n_samples
         for k in range(self.n_components):
             X_new[:,k] /= sne_over_K \
                          #* self.eigenvalues[k] #Was the paper author wrong?
         return X_new
 
+    def inverse_transform(self, X):
+        """
+        Transform points into default space.
+
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_components]
+
+        Returns
+        -------
+        X_new : array, shape = [n_samples, n_features]
+
+        Notes
+        -----
+
+        """
+        X = check_array(X)
+
+        new_data_n_samples = X.shape[0]
+
+        n_features = self.empirical_data.shape[1]
+
+        if self.embedding_ == None:
+            print("I can't do this inverse transform")
+            return np.zeros((new_data_n_samples, n_features))
+
+        old_data_n_samples = self.embedding_.shape[0]
+
+        K = kneighbors_graph(np.concatenate((self.embedding_, X)), self.n_neighbors_,
+                                                         include_self=True,
+                                                         n_jobs=self.n_jobs)
+        # currently only symmetric affinity_matrix supported
+        K = ((K + K.T) * 0.5)
+        K = K[:old_data_n_samples, :]
+        e_over_K = np.asarray(K.mean(axis=0))[0]
+        sne_over_K = np.sqrt(e_over_K[old_data_n_samples:])
+        e_over_K = np.diag(1/np.sqrt(e_over_K[:old_data_n_samples]))
+        K = K[:, old_data_n_samples:].toarray()
+        X_new = np.zeros((new_data_n_samples, n_features))
+        for i in range(new_data_n_samples):
+            K[:,i] = np.dot(e_over_K, K[:,i])
+        X_new = np.dot(np.transpose(K), self.embedding_) / old_data_n_samples
+        for k in range(n_features):
+            X_new[:,k] /= sne_over_K \
+                         #* self.eigenvalues[k] #Was the paper author wrong?
+        return X_new
