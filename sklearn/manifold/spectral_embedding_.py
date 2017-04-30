@@ -600,11 +600,11 @@ class SpectralEmbedding(BaseEstimator):
         sne_over_K = np.sqrt(e_over_K[old_data_n_samples:])
         e_over_K = np.diag(1/np.sqrt(e_over_K[:old_data_n_samples]))
         K = K[:, old_data_n_samples:].toarray()
-        X_new = np.zeros((new_data_n_samples, n_features))
         for i in range(new_data_n_samples):
             K[:,i] = np.dot(e_over_K, K[:,i])
-        X_new = np.dot(np.transpose(K), self.embedding_) / old_data_n_samples
+        X_new = np.dot(np.transpose(K), self.empirical_data) / old_data_n_samples
         for k in range(n_features):
             X_new[:,k] /= sne_over_K \
                          #* self.eigenvalues[k] #Was the paper author wrong?
         return X_new
+
