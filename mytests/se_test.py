@@ -18,7 +18,7 @@ def test(g=dataset_generator.Generator(), mode='show'):
     n_neighbors = 10
     n_components = 2
     fig = plt.figure(figsize=(15, 8))
-    se = SpectralEmbedding(n_components=n_components, n_neighbors=n_neighbors, out_of_sample=True)
+    se = SpectralEmbedding(n_components=n_components, n_neighbors=n_neighbors)
     '''--------------------------------------------------------------------------------------------------------------'''
     dataset, dataset_colors = g.generate_manifold(f, color_data=spectre1)
     ax = fig.add_subplot(241, projection='3d')
@@ -31,7 +31,7 @@ def test(g=dataset_generator.Generator(), mode='show'):
     new_points, new_colors = g.generate_manifold(f, spectre2)
 
     new_points_embedding = np.array(list(
-        se.transform(point.reshape(1, -1))
+        se.transform(point.reshape(1, -1))[0]
         for point in new_points
     ))
 
@@ -45,7 +45,7 @@ def test(g=dataset_generator.Generator(), mode='show'):
     '''--------------------------------------------------------------------------------------------------------------'''
     re_colors = dataset_generator.Generator.generate_colors(None, dataset.shape[0], spectre3)
     re_embedding = np.array(list(
-        se.transform(point.reshape(1, -1))
+        se.transform(point.reshape(1, -1))[0]
         for point in dataset
     ))
 
@@ -59,7 +59,7 @@ def test(g=dataset_generator.Generator(), mode='show'):
     '''--------------------------------------------------------------------------------------------------------------'''
 
     dataset_reconstruction = np.array(list(
-        se.reconstruct(point.reshape(1, -1))
+        se.inverse_transform(point.reshape(1, -1))[0]
         for point in dataset_embedding
     ))
 
@@ -99,6 +99,7 @@ GENERATORS = [
         dataset_generator.Ring(width=1, radius=2),
         dataset_generator.Helix(step=0, twists=1, width=1, offset=2),
         dataset_generator.Helix(step=1, twists=1, width=1, offset=0),
+        dataset_generator.Helix(step=1, twists=1, width=1, offset=2),
         dataset_generator.Helix(step=100, twists=1, width=2000, offset=211111),
         dataset_generator.Mobius(width=1, radius=1),
         dataset_generator.S_curve(),
