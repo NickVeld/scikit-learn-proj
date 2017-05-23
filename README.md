@@ -79,4 +79,4 @@ The project over 2 year of HSE Faculty of Computer Science 2016-2017
 
 Пример: "python3 se_test.py show 7"
 Сверху слева исходная выборка, сверху второе изображение - это исходная выборка + 1000 новых точки, сверху третье изображение -  исходная выборка, снизу слева вложение, полученное имеющимся алгоритмом, снизу в центре вложение новых точек, наложенных на вложение исходных точек, вложение с помощью OoS исходной выборки, наложенное на вложение исходной выборки (для оценки работы алгоритма, получилось хорошо).
-![S_curve](https://github.com/NickVeld/scikit-learn-proj/blob/master/mytests/images/S_1000_1000_1000_inverse.png)
+![S_curve](https://github.com/NickVeld/scikit-learn-proj/blob/master/mytests/images/S_1000_1000_1000_inverse.PNG)
